@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Библиотекарь Апокалипсиса</title>
+<style>
+  /* ========= БАЗА ========= */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --gold: #ffd700;
+    --gold-dim: #ccaa00;
+    --ink: #0a0806;
+    --paper: #d4c4a0;
+    --paper-dark: #b8a584;
+    --border: #8b7355;
+    --border-light: #a08060;
+    --shadow: rgba(0,0,0,0.8);
+    --glow-gold: rgba(255,215,0,0.3);
+  }
+  @font-face { font-family: 'BookTitle'; src: local('Palatino Linotype'), local('Book Antiqua'), local('Georgia'); font-weight: 700; }
+  @font-face { font-family: 'BookText';  src: local('Georgia'), local('Palatino'), local('Times New Roman'); }
+  body {
+    font-family: 'BookText', Georgia, serif;
+    background: var(--ink);
+    color: var(--paper);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    user-select: none;
+  }
+  /* ========= АНИМИРОВАННЫЙ ФОН ========= */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(circle at 25% 30%, rgba(139,69,19,0.25) 0%, transparent 40%),
+      radial-gradient(circle at 75% 70%, rgba(101,67,33,0.2) 0%, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(50,30,15,0.3) 0%, transparent 60%),
+      linear-gradient(180deg, #1a1410 0%, #0a0806 50%, #050403 100%);
+  }
+  .ash-particle {
+    position: fixed; width: 3px; height: 3px; background: rgba(255,215,0,0.3);
+    border-radius: 50%; pointer-events: none; opacity: 0; animation: ashFloat 12s infinite;
+  }
+  @keyframes ashFloat { 0%{transform:translate(0,100vh) rotate(0);opacity:0} 10%{opacity:.8} 90%{opacity:.8} 100%{transform:translate(100px,-100vh) rotate(720deg);opacity:0} }
+  .book-glow { position: fixed; width: 500px; height: 500px; background: radial-gradient(circle, rgba(255,200,100,0.08) 0%, transparent 60%); pointer-events:none; animation: bookPulse 4s ease-in-out infinite; z-index:-1; }
+  @keyframes bookPulse { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.1)} }
+
+  /* ========= ГЛАВНОЕ МЕНЮ ========= */
+  .main-menu { position:fixed; inset:0; z-index:5000; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(135deg,#0a0806 0%,#1a1410 100%); transition:opacity 1s ease; }
+  .main-menu h1 {
+    font-family:'BookTitle', Georgia, serif; font-size:4.5em; color:var(--gold);
+    text-shadow:3px 3px 6px var(--shadow), 0 0 40px var(--glow-gold), 0 0 80px rgba(255,215,0,0.2);
+    margin-bottom:20px; animation:titleFloat 3s ease-in-out infinite; letter-spacing:2px;
+  }
+  @keyframes titleFloat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-10px) scale(1.02)} }
+  .menu-subtitle { font-style:italic; color:var(--paper-dark); margin-bottom:50px; font-size:1.2em; opacity:.9; }
+  .menu-buttons{ display:flex; flex-direction:column; gap:20px; }
+  .menu-button{
+    padding:18px 50px; min-width:320px; text-align:center; cursor:pointer;
+    background:linear-gradient(135deg,#8b7355 0%,#6b5945 50%,#8b7355 100%); background-size:200% 100%;
+    border:2px solid var(--gold); border-radius:10px; color:var(--gold); font-size:1.2em; font-family:'BookTitle', Georgia, serif; font-weight:700; letter-spacing:1px;
+    transition:all .4s ease; text-shadow:2px 2px 4px rgba(0,0,0,0.5); position:relative; overflow:hidden;
+  }
+  .menu-button::before{ content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,215,0,0.2),transparent); transition:left .6s ease; }
+  .menu-button:hover{ background-position:-100% 0; transform:translateY(-3px); box-shadow:0 10px 30px rgba(255,215,0,0.3), inset 0 0 20px rgba(255,215,0,0.1); }
+  .menu-button:hover::before{ left:100% }
+
+  /* ========= ИГРОВОЙ КОНТЕЙНЕР ========= */
+  .game-container{ max-width:1700px; margin:0 auto; padding:25px; min-height:100vh; opacity:0; transition:opacity 1s ease; display:grid; gap:25px; grid-template-columns:320px 1fr 400px; }
+  .game-container.visible{ opacity:1; }
+
+  /* ========= ПАНЕЛЬ СТАТИСТИКИ ========= */
+  .stats-panel{ display:flex; flex-direction:column; gap:20px; }
+  .stats-box{
+    background:linear-gradient(145deg,rgba(0,0,0,0.85),rgba(30,20,10,0.75)); border:2px solid var(--border); border-radius:15px; padding:25px;
+    box-shadow: inset 0 2px 10px rgba(255,215,0,0.05), inset 0 -2px 10px rgba(0,0,0,0.5), 0 5px 25px rgba(0,0,0,0.8);
+    position:relative; overflow:hidden;
+  }
+  .stats-box::before{ content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:radial-gradient(circle,rgba(255,215,0,0.03) 0%, transparent 70%); animation:rotateGlow 20s linear infinite; }
+  @keyframes rotateGlow{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  .stats-box h2{ font-family:'BookTitle', Georgia, serif; font-weight:700; color:var(--gold); margin-bottom:25px; text-align:center; font-size:1.3em; text-shadow:2px 2px 4px var(--shadow), 0 0 15px var(--glow-gold); letter-spacing:1px; position:relative; }
+  .stat{ margin-bottom:20px; position:relative; }
+  .stat-label{ display:flex; justify-content:space-between; margin-bottom:10px; font-size:.95em; font-weight:600; }
+  .stat-value{ font-weight:700; color:var(--gold); text-shadow:0 0 5px var(--glow-gold); font-size:1.1em; }
+  .stat-bar{ background:linear-gradient(to bottom,#0a0806,#1a1410); height:26px; border-radius:13px; overflow:hidden; border:1px solid #3a3025; box-shadow: inset 0 2px 6px rgba(0,0,0,0.7), 0 1px 2px rgba(255,215,0,0.1); position:relative; }
+  .stat-fill{ height:100%; transition:width .8s cubic-bezier(.4,0,.2,1); border-radius:13px; position:relative; overflow:hidden; }
+  .stat-fill::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%); animation:shimmer 2.5s infinite; }
+  @keyframes shimmer{ 0%{transform:translateX(-100%) skewX(-15deg)} 100%{transform:translateX(200%) skewX(-15deg)} }
+  .stat.warning .stat-bar{ animation: warningPulse 1s infinite; box-shadow: inset 0 2px 6px rgba(0,0,0,0.7), 0 0 15px rgba(255,0,0,0.4); }
+  .stat.critical .stat-value{ color:#ff4444; animation: criticalBlink .5s infinite; }
+  @keyframes criticalBlink{ 0%,100%{opacity:1} 50%{opacity:.5} }
+  @keyframes warningPulse{ 0%,100%{border-color:#8b4513} 50%{border-color:#ff6b6b} }
+  .stat-health .stat-fill{ background:linear-gradient(90deg,#4a0e0e,#8b0000,#dc143c,#ff6b6b) }
+  .stat-food   .stat-fill{ background:linear-gradient(90deg,#4a3a0a,#8b6914,#daa520,#ffdb58) }
+  .stat-safety .stat-fill{ background:linear-gradient(90deg,#2a0a4a,#4b0082,#8a2be2,#b19cd9) }
+  .stat-morale .stat-fill{ background:linear-gradient(90deg,#0a3a0a,#006400,#32cd32,#90ee90) }
+  .stat-trust  .stat-fill{ background:linear-gradient(90deg,#0a0a3a,#191970,#4169e1,#6495ed) }
+
+  .journal-box{ background:linear-gradient(145deg,rgba(0,0,0,0.85),rgba(30,20,10,0.75)); border:2px solid var(--border); border-radius:15px; padding:20px; max-height:350px; overflow-y:auto; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 5px 25px rgba(0,0,0,0.8); }
+  .journal-box h3{ font-family:'BookTitle', Georgia, serif; font-weight:700; color:var(--gold); margin-bottom:15px; font-size:1.1em; text-shadow:0 0 10px var(--glow-gold); }
+  .journal-entry{ font-size:.9em; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(139,115,85,0.3); font-style:italic; color:var(--paper-dark); animation: fadeIn .5s ease; line-height:1.4; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(30px)} to{opacity:1; transform:translateY(0)} }
+
+  /* ========= ЦЕНТРАЛЬНАЯ ОБЛАСТЬ ========= */
+  .main-area{ display:flex; flex-direction:column; gap:25px; }
+  .day-info{ background:linear-gradient(145deg,rgba(0,0,0,0.85),rgba(40,30,15,0.75)); border:2px solid var(--border); border-radius:20px; padding:30px; text-align:center; position:relative; overflow:hidden; box-shadow: inset 0 2px 15px rgba(255,215,0,0.1), 0 5px 30px rgba(0,0,0,0.8); }
+  .day-info::before{ content:''; position:absolute; top:-100%; left:-100%; width:300%; height:300%; background:radial-gradient(circle,rgba(255,215,0,0.05) 0%, transparent 60%); animation:rotate 30s linear infinite; }
+  @keyframes rotate{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  .day-info h1{ font-family:'BookTitle', Georgia, serif; font-weight:700; font-size:2.8em; color:var(--gold); text-shadow:3px 3px 6px var(--shadow), 0 0 20px var(--glow-gold); margin-bottom:15px; position:relative; letter-spacing:2px; }
+  .day-description{ font-size:1.2em; color:var(--paper); font-style:italic; position:relative; opacity:.9; }
+
+  .visitor-area{
+    background:linear-gradient(145deg,rgba(0,0,0,0.85),rgba(30,20,10,0.75)); border:2px solid var(--border); border-radius:20px; padding:40px; min-height:450px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 5px 35px rgba(0,0,0,0.8);
+  }
+  .visitors-queue{ position:absolute; top:15px; right:15px; display:flex; gap:8px; }
+  .queue-indicator{ width:12px; height:12px; border-radius:50%; background:var(--border); transition:all .3s ease; }
+  .queue-indicator.active{ background:var(--gold); box-shadow:0 0 10px var(--glow-gold); animation:queuePulse 1s infinite; }
+  @keyframes queuePulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+  .visitor{ text-align:center; animation: fadeIn .8s ease; max-width:500px; }
+  .visitor-portrait{
+    width:160px; height:160px; border-radius:50%; margin:0 auto 25px; display:flex; align-items:center; justify-content:center; border:3px solid var(--border);
+    background: radial-gradient(circle, #2a1810, #1a0f08); font-size:4.5em; cursor:pointer; transition:all .3s ease; box-shadow:0 5px 20px rgba(0,0,0,0.6), inset 0 0 30px rgba(0,0,0,0.4); position:relative;
+  }
+  .visitor-portrait::after{ content:''; position:absolute; inset:-8px; border-radius:50%; background:radial-gradient(circle,transparent 60%, rgba(255,215,0,0.1) 100%); opacity:0; transition:opacity .3s ease; }
+  .visitor-portrait:hover{ transform:scale(1.08); box-shadow:0 8px 30px rgba(139,115,85,0.5), inset 0 0 40px rgba(255,215,0,0.1); }
+  .visitor-portrait:hover::after{ opacity:1; }
+  .visitor-portrait.selected{ border-color:var(--gold); box-shadow:0 0 40px var(--glow-gold), inset 0 0 30px rgba(255,215,0,0.2); animation:selectedGlow 2s ease-in-out infinite; }
+  @keyframes selectedGlow{ 0%,100%{ transform:scale(1); filter:brightness(1)} 50%{ transform:scale(1.05); filter:brightness(1.2)} }
+  .visitor-name{ font-family:'BookTitle', Georgia, serif; font-weight:700; font-size:1.5em; color:#e8d7c3; margin-bottom:20px; text-shadow:2px 2px 4px var(--shadow); letter-spacing:1px; }
+  .visitor-problem{
+    background: linear-gradient(135deg, rgba(139,115,85,0.15), rgba(100,80,60,0.1));
+    border:1px solid rgba(139,115,85,0.5); border-radius:12px; padding:20px; margin:15px 0; font-style:italic; line-height:1.6; font-size:1.1em;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.3), 0 2px 10px rgba(0,0,0,0.2);
+  }
+  .problem-keyword{ color:var(--gold); font-weight:700; font-style:normal; text-transform:uppercase; letter-spacing:1px; text-shadow:0 0 12px var(--glow-gold); animation:keywordPulse 2s ease-in-out infinite; }
+  @keyframes keywordPulse{ 0%,100%{ filter:brightness(1)} 50%{ filter:brightness(1.3)} }
+
+  /* ========= КНИГА СЛОВ ========= */
+  .word-book{
+    background:linear-gradient(145deg,rgba(0,0,0,0.85),rgba(40,30,15,0.75)); border:2px solid var(--border); border-radius:20px; padding:25px; display:flex; flex-direction:column;
+    max-height:calc(100vh - 50px); box-shadow: inset 0 2px 15px rgba(255,215,0,0.05), 0 5px 35px rgba(0,0,0,0.8); position:relative; overflow:hidden;
+  }
+  .word-book::before{ content:''; position:absolute; top:-50%; right:-50%; width:200%; height:200%; background:radial-gradient(circle,rgba(255,215,0,0.02) 0%, transparent 60%); animation: rotate 40s linear infinite reverse; }
+  .word-book h2{ font-family:'BookTitle', Georgia, serif; font-weight:700; color:var(--gold); margin-bottom:15px; text-align:center; font-size:1.6em; text-shadow:2px 2px 4px var(--shadow), 0 0 20px var(--glow-gold); letter-spacing:2px; position:relative; }
+  .word-count{ text-align:center; color:var(--paper-dark); font-size:.95em; margin-bottom:15px; font-weight:600; position:relative; }
+  .word-search{
+    margin-bottom:20px; padding:12px 16px; background: rgba(0,0,0,0.5); border:1px solid var(--border); border-radius:8px; color:var(--paper); font-family:'BookText', Georgia, serif; font-size:1em; transition:all .3s ease; position:relative;
+  }
+  .word-search:focus{ outline:none; border-color:var(--gold-dim); box-shadow:0 0 10px rgba(255,215,0,0.2); }
+  .word-categories{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; position:relative; }
+  .category-tab{
+    padding:8px 14px; background:linear-gradient(135deg, rgba(139,115,85,0.2), rgba(100,80,60,0.15)); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:.9em; font-weight:600; transition:all .3s ease; position:relative; letter-spacing:.5px;
+  }
+  .category-tab.active{ background:linear-gradient(135deg, rgba(139,115,85,0.5), rgba(100,80,60,0.4)); color:var(--gold); box-shadow:0 0 15px rgba(255,215,0,0.3), inset 0 1px 3px rgba(255,215,0,0.1); }
+  .category-tab:hover:not(.active){ background:linear-gradient(135deg, rgba(139,115,85,0.35), rgba(100,80,60,0.25)); transform:translateY(-2px); }
+  .category-count{ position:absolute; top:-6px; right:-6px; background:var(--gold); color:var(--ink); border-radius:50%; width:18px; height:18px; font-size:.75em; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
+
+  .words-container{ flex:1; overflow-y:auto; padding:20px; background:linear-gradient(135deg, rgba(0,0,0,0.3), rgba(20,15,10,0.2)); border-radius:12px; margin-bottom:20px; position:relative; }
+  .words-container::-webkit-scrollbar{ width:10px; } .words-container::-webkit-scrollbar-track{ background:rgba(0,0,0,0.3); border-radius:5px; }
+  .words-container::-webkit-scrollbar-thumb{ background:var(--border); border-radius:5px; } .words-container::-webkit-scrollbar-thumb:hover{ background:var(--border-light); }
+
+  .word{
+    display:inline-block; padding:12px 18px; margin:8px; background:linear-gradient(135deg, rgba(139,115,85,0.35), rgba(100,80,60,0.3));
+    border:1px solid var(--border); border-radius:8px; cursor:grab; transition:all .25s ease; position:relative; font-size:1.05em; font-weight:600; letter-spacing:.5px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,215,0,0.05);
+  }
+  .word:active{ cursor:grabbing; }
+  .word:hover:not(.used){ background:linear-gradient(135deg, rgba(139,115,85,0.5), rgba(100,80,60,0.45)); transform:translateY(-4px) scale(1.05); box-shadow:0 6px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,215,0,0.2), inset 0 1px 3px rgba(255,215,0,0.1); }
+  .word.used{ opacity:.3; text-decoration:line-through; cursor:not-allowed; background:rgba(50,50,50,0.3); box-shadow:none; }
+  .word.selected{ background:linear-gradient(135deg, rgba(255,215,0,0.35), rgba(255,200,0,0.25)); border-color:var(--gold); box-shadow:0 0 20px var(--glow-gold), inset 0 0 10px rgba(255,215,0,0.2); transform:translateY(-4px) scale(1.08); animation:selectedWordPulse 1s ease-in-out infinite; }
+  @keyframes selectedWordPulse{ 0%,100%{ filter:brightness(1)} 50%{ filter:brightness(1.2)} }
+  .word.neologism{ background:linear-gradient(135deg, rgba(150,100,200,0.35), rgba(100,50,150,0.3)); border-color:#9966ff; }
+  .word-tooltip{
+    position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.95); border:1px solid var(--border); padding:10px 14px; border-radius:8px; font-size:.9em; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .3s ease; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.5);
+  }
+  .word:hover .word-tooltip{ opacity:1 }
+
+  /* Кнопки действий */
+  .action-buttons{ display:flex; gap:12px; position:relative; }
+  .action-button{
+    flex:1; padding:14px 24px; background:linear-gradient(135deg,#8b7355 0%, #6b5945 50%, #8b7355 100%); background-size:200% 100%;
+    border:2px solid var(--gold); border-radius:10px; color:var(--gold); font-family:'BookTitle', Georgia, serif; font-weight:700; font-size:1.05em; cursor:pointer; transition:all .3s ease; text-shadow:2px 2px 4px rgba(0,0,0,0.5); position:relative; letter-spacing:.5px; overflow:hidden;
+  }
+  .action-button::before{ content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent, rgba(255,215,0,0.3), transparent); transition:left .6s ease; }
+  .action-button:hover:not(:disabled){ background-position:-100% 0; box-shadow:0 0 25px var(--glow-gold), inset 0 0 15px rgba(255,215,0,0.1); transform:translateY(-2px); }
+  .action-button:hover:not(:disabled)::before{ left:100% }
+  .action-button:disabled{ opacity:.4; cursor:not-allowed; border-color:#666; color:#999; background:linear-gradient(135deg,#4a4a4a,#3a3a3a) }
+  .neologism-count{
+    position:absolute; top:-10px; right:-10px; background:var(--gold); color:var(--ink); border-radius:50%; width:22px; height:22px; font-size:.85em; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  /* ========= МОДАЛЬНЫЕ ОКНА ========= */
+  .modal{ position:fixed; inset:0; background:rgba(0,0,0,0.92); display:flex; align-items:center; justify-content:center; z-index:4000; animation: fadeIn .3s ease; backdrop-filter: blur(5px); }
+  .modal-content{
+    background:linear-gradient(145deg,#1a1410,#2a2010); border:2px solid var(--gold); border-radius:20px; padding:35px; max-width:750px; max-height:85vh; overflow-y:auto; text-align:center;
+    box-shadow:0 10px 50px rgba(0,0,0,0.8), 0 0 40px var(--glow-gold); animation: modalSlide .4s ease;
+  }
+  @keyframes modalSlide{ from{opacity:0; transform:translateY(-30px)} to{opacity:1; transform:translateY(0)} }
+  .modal-content h3{ font-family:'BookTitle', Georgia, serif; font-weight:700; color:var(--gold); margin-bottom:20px; font-size:1.5em; text-shadow:0 0 15px var(--glow-gold); letter-spacing:1px; }
+
+  /* Выбор слов в модалках (discovery / neologism) */
+  .word-selector{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:10px; margin:15px 0 10px; max-height:260px; overflow:auto; padding:10px; background:rgba(0,0,0,0.25); border-radius:10px; }
+  .word-option{
+    padding:10px 12px; border:1px solid var(--border); border-radius:8px; cursor:pointer;
+    background:linear-gradient(135deg, rgba(139,115,85,0.25), rgba(100,80,60,0.2)); transition: all .25s ease; font-weight:600;
+  }
+  .word-option:hover{ transform: translateY(-2px); background:linear-gradient(135deg, rgba(139,115,85,0.4), rgba(100,80,60,0.35)); }
+  .word-option.selected{ border-color: var(--gold); box-shadow: 0 0 14px var(--glow-gold); background:linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,200,0,0.2)); }
+
+  /* ========= РЕЗУЛЬТАТЫ ========= */
+  .result-message{
+    position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:3500;
+    background:linear-gradient(145deg, rgba(0,0,0,0.96), rgba(40,30,15,0.96)); border:2px solid var(--gold); border-radius:20px; padding:30px; max-width:650px; text-align:center;
+    animation: resultAppear .5s ease; box-shadow:0 10px 50px rgba(0,0,0,0.8), 0 0 30px var(--glow-gold);
+  }
+  @keyframes resultAppear{ from{opacity:0; transform:translate(-50%, -50%) scale(.85)} to{opacity:1; transform:translate(-50%, -50%) scale(1)} }
+  .stat-changes{ margin-top:20px; display:flex; justify-content:center; gap:20px; flex-wrap:wrap; }
+  .stat-change{ font-size:1.1em; font-weight:700; padding:5px 10px; border-radius:5px; animation: statPop .5s ease; }
+  @keyframes statPop{ from{ transform:scale(0) } to{ transform:scale(1) } }
+  .positive{ color:#4ade80; text-shadow:0 0 10px rgba(74,222,128,0.5); background:rgba(74,222,128,0.1); }
+  .negative{ color:#ff6b6b; text-shadow:0 0 10px rgba(255,107,107,0.5); background:rgba(255,107,107,0.1); }
+
+  .word-effect{
+    position:fixed; font-family:'BookTitle', Georgia, serif; font-weight:700; font-size:3em; color:var(--gold); pointer-events:none; z-index:3400;
+    text-shadow:0 0 20px var(--glow-gold), 0 0 40px rgba(255,215,0,0.5); animation: wordDisappear 3s ease forwards; left:50%; top:50%; letter-spacing:2px;
+  }
+  @keyframes wordDisappear{ 0%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0); filter:blur(0)} 50%{opacity:1; transform:translate(-50%,-80%) scale(1.2) rotate(5deg); filter:blur(0)} 100%{opacity:0; transform:translate(-50%,-200%) scale(.3) rotate(15deg); filter:blur(10px)} }
+
+  /* ========= КОНЕЦ ИГРЫ ========= */
+  .game-over{ position:fixed; inset:0; background:rgba(0,0,0,0.98); display:flex; align-items:center; justify-content:center; z-index:3000; animation: fadeIn 1s ease; backdrop-filter: blur(10px); }
+  .game-over-content{ text-align:center; max-width:750px; padding:50px; }
+  .game-over h1{ font-family:'BookTitle', Georgia, serif; font-weight:700; font-size:4em; margin-bottom:30px; text-shadow:0 0 40px currentColor; letter-spacing:3px; }
+  .victory{ color:#4ade80 } .defeat{ color:#ff6b6b } .neutral{ color:var(--gold) }
+
+  /* Спец-уведомления */
+  .event-notification{
+    position:fixed; top:50px; left:50%; transform:translateX(-50%);
+    background:linear-gradient(145deg, rgba(40,30,15,0.98), rgba(0,0,0,0.98)); border:2px solid var(--gold); border-radius:15px; padding:20px 30px; color:var(--paper);
+    font-size:1.1em; font-weight:600; z-index:3600; animation:eventSlide .5s ease; box-shadow:0 10px 40px rgba(0,0,0,0.8), 0 0 30px var(--glow-gold);
+  }
+  @keyframes eventSlide{ from{ opacity:0; transform:translateX(-50%) translateY(-20px)} to{ opacity:1; transform:translateX(-50%) translateY(0)} }
+
+  /* Адаптивность */
+  @media (max-width: 1400px){
+    .game-container{ grid-template-columns:1fr; max-width:900px; }
+    .stats-panel{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .word-book{ max-height:500px; }
+  }
+  .phase-screen{
+    position:absolute;
+    inset:25px;
+    background:rgba(10,8,6,0.92);
+    border:2px solid var(--border);
+    border-radius:18px;
+    padding:30px;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:16px;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.45);
+    z-index:3;
+  }
+  .phase-screen.active{ display:flex; }
+  .phase-screen h2{ font-size:1.9em; color:var(--gold); text-shadow:0 0 12px rgba(255,215,0,0.4); }
+  .phase-text{ font-size:1.1em; color:var(--paper); line-height:1.5; max-width:420px; }
+  .phase-metrics{ display:flex; flex-direction:column; gap:6px; color:var(--paper); font-size:1em; }
+  .phase-metrics span{ color:var(--gold); font-weight:600; }
+  .phase-actions{ margin-top:8px; display:flex; gap:12px; justify-content:center; }
+
+</style>
+</head>
+<body>
+
+<!-- Главное меню -->
+<div class="main-menu" id="main-menu">
+  <h1>БИБЛИОТЕКАРЬ АПОКАЛИПСИСА</h1>
+  <p class="menu-subtitle">Каждое слово на вес золота...</p>
+  <div class="menu-buttons">
+    <button class="menu-button" id="continue-btn" style="display:none" onclick="continueGame()">ПРОДОЛЖИТЬ</button>
+    <button class="menu-button" onclick="startCampaign()">НОВАЯ КАМПАНИЯ</button>
+    <button class="menu-button" onclick="startRoguelike()">ВЫЖИВАНИЕ</button>
+  </div>
+</div>
+
+<!-- Эффекты свечения -->
+<div class="book-glow" style="top: 10%; left: 5%;"></div>
+<div class="book-glow" style="top: 60%; right: 10%;"></div>
+
+<!-- Основной контейнер -->
+<div class="game-container" id="game-container">
+  <!-- Левая панель -->
+  <div class="stats-panel">
+    <div class="stats-box">
+      <h2>⚜️ ПОСЕЛЕНИЕ ⚜️</h2>
+      <div class="stat stat-health" data-stat="health">
+        <div class="stat-label"><span>❤️ Здоровье</span><span class="stat-value" id="health-value">65</span></div>
+        <div class="stat-bar"><div class="stat-fill" style="width:65%"></div></div>
+      </div>
+      <div class="stat stat-food" data-stat="food">
+        <div class="stat-label"><span>🌾 Провиант</span><span class="stat-value" id="food-value">55</span></div>
+        <div class="stat-bar"><div class="stat-fill" style="width:55%"></div></div>
+      </div>
+      <div class="stat stat-safety" data-stat="safety">
+        <div class="stat-label"><span>🛡️ Безопасность</span><span class="stat-value" id="safety-value">45</span></div>
+        <div class="stat-bar"><div class="stat-fill" style="width:45%"></div></div>
+      </div>
+      <div class="stat stat-morale" data-stat="morale">
+        <div class="stat-label"><span>💚 Мораль</span><span class="stat-value" id="morale-value">50</span></div>
+        <div class="stat-bar"><div class="stat-fill" style="width:50%"></div></div>
+      </div>
+      <div class="stat stat-trust" data-stat="trust">
+        <div class="stat-label"><span>🤝 Доверие</span><span class="stat-value" id="trust-value">45</span></div>
+        <div class="stat-bar"><div class="stat-fill" style="width:45%"></div></div>
+      </div>
+    </div>
+    <div class="journal-box">
+      <h3>📜 ДНЕВНИК</h3>
+      <div id="journal-content">
+        <div class="journal-entry">Библиотека открыта для страждущих...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Центральная область -->
+  <div class="main-area">
+    <div class="day-info">
+      <h1>ДЕНЬ <span id="day-number">1</span></h1>
+      <p class="day-description" id="day-description">Начало испытаний...</p>
+    </div>
+
+    <div class="visitor-area">
+      <div class="visitors-queue" id="visitors-queue"></div>
+
+      <div class="phase-screen" id="morning-briefing">
+        <h2>🌅 Утренний доклад</h2>
+        <div class="phase-text" id="morning-briefing-text">Готовим сводку по новому дню...</div>
+        <div class="phase-metrics" id="morning-briefing-metrics"></div>
+        <div class="phase-actions">
+          <button class="action-button" id="begin-triage-btn">НАЧАТЬ ПРИЁМ</button>
+        </div>
+      </div>
+
+      <div class="phase-screen" id="evening-summary-screen">
+        <h2>🌙 Вечерняя сводка</h2>
+        <div class="phase-text" id="evening-summary-text"></div>
+        <div class="phase-metrics" id="evening-summary-metrics"></div>
+        <div class="phase-actions">
+          <button class="action-button" id="next-day-btn" style="display:none" onclick="nextDay()">СЛЕДУЮЩИЙ ДЕНЬ</button>
+        </div>
+      </div>
+
+      <div id="visitor-content"></div>
+    </div>
+  </div>
+
+  <!-- Правая панель -->
+  <div class="word-book">
+    <h2>📖 КНИГА СЛОВ</h2>
+    <div class="word-count" id="word-count">Доступно: 0</div>
+    <input type="text" class="word-search" placeholder="Поиск слова..." id="word-search">
+    <div class="word-categories" id="word-categories"></div>
+    <div class="words-container" id="words-container"></div>
+    <div class="action-buttons">
+      <button class="action-button" id="give-word-btn" onclick="giveWord()" disabled>ОТДАТЬ СЛОВО</button>
+      <button class="action-button" id="create-word-btn" onclick="openNeologismModal()">СОЗДАТЬ <span class="neologism-count" id="neo-count">2</span></button>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
