@@ -98,6 +98,57 @@
   .stat-morale .stat-fill{ background:linear-gradient(90deg,#0a3a0a,#006400,#32cd32,#90ee90) }
   .stat-trust  .stat-fill{ background:linear-gradient(90deg,#0a0a3a,#191970,#4169e1,#6495ed) }
 
+  .cluster-warnings{
+    margin-top:18px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .cluster-warning{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 14px;
+    border-radius:10px;
+    background:linear-gradient(135deg, rgba(120,40,20,0.35), rgba(60,20,10,0.3));
+    border:1px solid rgba(255,120,60,0.4);
+    box-shadow:0 4px 14px rgba(0,0,0,0.45), inset 0 1px 2px rgba(255,200,150,0.1);
+    position:relative;
+    overflow:hidden;
+    min-width:0;
+    animation:warningPulse 1.5s ease-in-out infinite;
+  }
+  .cluster-warning::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(120deg, rgba(255,180,120,0.08), transparent 55%);
+    opacity:0.7;
+  }
+  .cluster-warning .warning-icon{
+    position:relative;
+    font-size:1.3em;
+    text-shadow:0 0 10px rgba(255,160,80,0.5);
+  }
+  .cluster-warning .warning-info{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .cluster-warning .warning-title{
+    font-weight:700;
+    color:var(--gold);
+    letter-spacing:.6px;
+    text-shadow:0 0 6px rgba(255,200,120,0.25);
+  }
+  .cluster-warning .warning-desc{
+    font-size:.8em;
+    color:var(--paper-dark);
+    max-width:220px;
+    line-height:1.25;
+  }
+
   .journal-box{ background:linear-gradient(145deg,rgba(0,0,0,0.85),rgba(30,20,10,0.75)); border:2px solid var(--border); border-radius:15px; padding:20px; max-height:350px; overflow-y:auto; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 5px 25px rgba(0,0,0,0.8); }
   .journal-box h3{ font-family:'BookTitle', Georgia, serif; font-weight:700; color:var(--gold); margin-bottom:15px; font-size:1.1em; text-shadow:0 0 10px var(--glow-gold); }
   .journal-entry{ font-size:.9em; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(139,115,85,0.3); font-style:italic; color:var(--paper-dark); animation: fadeIn .5s ease; line-height:1.4; }
@@ -295,6 +346,7 @@
         <div class="stat-label"><span>🤝 Доверие</span><span class="stat-value" id="trust-value">45</span></div>
         <div class="stat-bar"><div class="stat-fill" style="width:45%"></div></div>
       </div>
+      <div class="cluster-warnings" id="cluster-warnings" style="display:none;"></div>
     </div>
     <div class="journal-box">
       <h3>📜 ДНЕВНИК</h3>
@@ -339,6 +391,7 @@ const CATEGORIES = ['all','medicine','emotion','nature','resource','social','abs
 const CATEGORY_NAMES = { all:'ВСЕ', medicine:'МЕДИЦИНА', emotion:'ЭМОЦИИ', nature:'ПРИРОДА', resource:'РЕСУРСЫ', social:'ОБЩЕСТВО', abstract:'АБСТРАКТ' };
 
 const DEFAULT_STATS = { health:65, food:55, safety:45, morale:50, trust:45 };
+const STAT_EMOJIS = { health:'❤️', food:'🌾', safety:'🛡️', morale:'💚', trust:'🤝' };
 
 let gameState = {
   mode:'campaign',
@@ -356,7 +409,8 @@ let gameState = {
   nightDecay:3,
   crisisFlags:{ epidemic:false, famine:false, unrest:false },
   wordsUsedToday:[],
-  snapshot:{}
+  snapshot:{},
+  clusterState:{ depleted:new Set(), activePenalties:{} },
 };
 
 /* ===================== БАЗА СЛОВ ===================== */
@@ -406,6 +460,178 @@ const wordsDatabase = [
   { text:"Судьба", category:"abstract", id:"abs4", tooltip:"Предначертание" },
   { text:"Память", category:"abstract", id:"abs5", tooltip:"Воспоминания" }
 ];
+
+/* ===================== КЛАСТЕРЫ СЛОВ ===================== */
+const WORD_CLUSTERS = {
+  warmth:{
+    name:'Тепло',
+    icon:'🔥',
+    words:['nat2','nat5','res5'],
+    penalty:{
+      immediate:{ morale:-4 },
+      daily:{ morale:-2 },
+      warning:'Мораль -2/день',
+      journal:'Слова тепла иссякли — жители мёрзнут.'
+    }
+  },
+  healing:{
+    name:'Исцеление',
+    icon:'💉',
+    words:['med1','med2','med3','med4','med5','med6'],
+    penalty:{
+      immediate:{ health:-6 },
+      daily:{ health:-3 },
+      warning:'Здоровье -3/день',
+      journal:'Запасы целительных слов пусты — здоровье тает.'
+    }
+  },
+  sustenance:{
+    name:'Пропитание',
+    icon:'🥖',
+    words:['res1','res2','res3','nat1','nat3'],
+    penalty:{
+      immediate:{ food:-6 },
+      daily:{ food:-3 },
+      warning:'Провиант -3/день',
+      journal:'Слова о пище исчерпаны — склады пустеют.'
+    }
+  },
+  order:{
+    name:'Порядок',
+    icon:'⚖️',
+    words:['soc1','soc2','soc3','soc4','soc5','soc6'],
+    penalty:{
+      immediate:{ safety:-5, trust:-4 },
+      daily:{ safety:-3, trust:-2 },
+      warning:'🛡️ -3, 🤝 -2/день',
+      journal:'Слова порядка забыты — безопасность и доверие рушатся.'
+    }
+  },
+  spirit:{
+    name:'Дух',
+    icon:'🕯️',
+    words:['emo1','emo2','emo3','emo5','abs3','abs5'],
+    penalty:{
+      immediate:{ morale:-5, trust:-3 },
+      daily:{ morale:-3 },
+      warning:'Мораль -3/день',
+      journal:'Слова надежды исчезли — дух поселения угасает.'
+    }
+  }
+};
+
+function formatStatChanges(changes){
+  if (!changes) return '';
+  return Object.entries(changes)
+    .filter(([,value])=>value)
+    .map(([stat,value])=>{
+      const emoji = STAT_EMOJIS[stat] || '';
+      const sign = value>0?'+':'';
+      return `${emoji} ${sign}${value}`.trim();
+    })
+    .join(' • ');
+}
+
+function updateClusterWarnings(){
+  const container = document.getElementById('cluster-warnings');
+  if (!container) return;
+  container.innerHTML = '';
+  const active = gameState.clusterState?.activePenalties || {};
+  Object.keys(active).forEach(clusterId=>{
+    const cluster = WORD_CLUSTERS[clusterId];
+    if (!cluster) return;
+    const warning = document.createElement('div');
+    warning.className = 'cluster-warning';
+    warning.innerHTML = `
+      <span class="warning-icon">${cluster.icon || '⚠️'}</span>
+      <div class="warning-info">
+        <span class="warning-title">${cluster.name}</span>
+        ${cluster.penalty?.warning ? `<span class="warning-desc">${cluster.penalty.warning}</span>` : ''}
+      </div>
+    `;
+    if (cluster.penalty?.journal) warning.title = cluster.penalty.journal;
+    container.appendChild(warning);
+  });
+  container.style.display = container.childElementCount ? 'flex' : 'none';
+}
+
+function applyClusterDailyPenalties(){
+  const active = gameState.clusterState?.activePenalties;
+  if (!active) return null;
+  const combined = {};
+  const affected = [];
+  Object.entries(active).forEach(([clusterId, penalty])=>{
+    if (!penalty?.daily) return;
+    affected.push(clusterId);
+    Object.entries(penalty.daily).forEach(([stat,value])=>{
+      if (!value) return;
+      combined[stat] = (combined[stat]||0) + value;
+    });
+  });
+  if (!affected.length) return null;
+  applyEffects(combined);
+  const names = affected.map(id=>WORD_CLUSTERS[id]?.name || id);
+  const summary = formatStatChanges(combined);
+  addToJournal(`⚠️ Последствия истощённых кластеров (${names.join(', ')}): ${summary}`);
+  return { clusters:names, summary };
+}
+
+function checkClusterDepletion(options={}){
+  const { silent=false, skipImmediate=false } = options;
+  if (!gameState.clusterState){
+    gameState.clusterState = { depleted:new Set(), activePenalties:{} };
+  }
+  const newPenalties = {};
+  const newlyDepleted = [];
+  const restored = [];
+
+  Object.entries(WORD_CLUSTERS).forEach(([clusterId, cluster])=>{
+    const remaining = cluster.words.filter(wordId=>!gameState.usedWords.has(wordId));
+    if (remaining.length===0){
+      if (!gameState.clusterState.depleted.has(clusterId)){
+        gameState.clusterState.depleted.add(clusterId);
+        newlyDepleted.push(clusterId);
+      }
+      newPenalties[clusterId] = cluster.penalty || {};
+    } else if (gameState.clusterState.depleted.has(clusterId)){
+      gameState.clusterState.depleted.delete(clusterId);
+      restored.push(clusterId);
+    }
+  });
+
+  gameState.clusterState.activePenalties = newPenalties;
+  updateClusterWarnings();
+
+  if (silent) return;
+
+  newlyDepleted.forEach(clusterId=>{
+    const cluster = WORD_CLUSTERS[clusterId];
+    if (!cluster) return;
+    const penalty = cluster.penalty || {};
+    const journalParts = [];
+    if (penalty.journal) journalParts.push(penalty.journal);
+    if (!skipImmediate && penalty.immediate){
+      applyEffects(penalty.immediate);
+      const immediateText = formatStatChanges(penalty.immediate);
+      if (immediateText) journalParts.push(`Мгновенно: ${immediateText}`);
+    }
+    if (penalty.daily){
+      const dailyText = formatStatChanges(penalty.daily);
+      if (dailyText) journalParts.push(`Каждый день: ${dailyText}`);
+    }
+    const text = journalParts.length ? journalParts.join(' ') : `Кластер «${cluster.name}» исчерпан.`;
+    addToJournal(`⚠️ ${text}`);
+    const warn = penalty.warning ? ` (${penalty.warning})` : '!';
+    showNotification(`⚠️ Кластер «${cluster.name}» истощён${warn}`);
+  });
+
+  if (restored.length){
+    restored.forEach(clusterId=>{
+      const cluster = WORD_CLUSTERS[clusterId];
+      addToJournal(`✨ Кластер «${cluster?.name||clusterId}» восстановлен.`);
+    });
+  }
+}
 
 /* ===================== КАМПАНИЯ / СОБЫТИЯ ===================== */
 const campaignEvents = {
@@ -536,7 +762,8 @@ function saveGame(){
   const save = {
     mode:gameState.mode, day:gameState.day, stats:gameState.stats,
     usedWords:[...gameState.usedWords], discoveredWords:gameState.discoveredWords,
-    canCreateNeologism:gameState.canCreateNeologism, roguelikeScore:gameState.roguelikeScore
+    canCreateNeologism:gameState.canCreateNeologism, roguelikeScore:gameState.roguelikeScore,
+    clusterDepleted:[...(gameState.clusterState?.depleted || [])]
   };
   localStorage.setItem('librarian_save', JSON.stringify(save));
 }
@@ -546,9 +773,15 @@ function continueGame(){
   resetGame();
   Object.assign(gameState, {
     mode:data.mode||'campaign', day:data.day||1, stats:data.stats||{...DEFAULT_STATS},
-    usedWords:new Set(data.usedWords||[]), discoveredWords:data.discoveredWords||[],
+    discoveredWords:data.discoveredWords||[],
     canCreateNeologism: data.canCreateNeologism ?? 2, roguelikeScore:data.roguelikeScore||0
   });
+  gameState.usedWords = new Set(data.usedWords||[]);
+  gameState.clusterState = {
+    depleted:new Set(data.clusterDepleted||[]),
+    activePenalties:{}
+  };
+  checkClusterDepletion({ silent:true, skipImmediate:true });
   enterGame(); startDay();
 }
 
@@ -589,15 +822,17 @@ function resetGame(){
     mode:'campaign', day:1, stats:{...DEFAULT_STATS}, currentVisitor:null, selectedWord:null,
     visitorsQueue:[], usedWords:new Set(), journal:[], canCreateNeologism:2, discoveredWords:[],
     roguelikeScore:0, ended:false, nightDecay:3, crisisFlags:{epidemic:false,famine:false,unrest:false},
-    wordsUsedToday:[], snapshot:{}
+    wordsUsedToday:[], snapshot:{},
+    clusterState:{ depleted:new Set(), activePenalties:{} }
   };
+  updateClusterWarnings();
 }
 function enterGame(){
   document.getElementById('main-menu').style.opacity='0';
   setTimeout(()=>{
     document.getElementById('main-menu').style.display='none';
     document.getElementById('game-container').classList.add('visible');
-    renderCategories(); renderWords(); updateStats(); updateWordCount();
+    renderCategories(); renderWords(); updateStats(); updateWordCount(); updateClusterWarnings();
   }, 1000);
 }
 
@@ -640,13 +875,19 @@ function startDay(){
 }
 
 function applyNightDecay(){
+  const nightlyEffects = {};
   Object.keys(gameState.stats).forEach(stat=>{
     const decay = Math.floor(Math.random()*gameState.nightDecay)+1;
-    gameState.stats[stat] = Math.max(0, gameState.stats[stat]-decay);
+    nightlyEffects[stat] = (nightlyEffects[stat]||0) - decay;
   });
-  addToJournal(`Ночь прошла тревожно. Поселение ослабло.`);
-  updateStats();
+  applyEffects(nightlyEffects);
+  const summary = formatStatChanges(nightlyEffects) || '—';
+  addToJournal(`Ночь прошла тревожно. Потери: ${summary}.`);
+  const clusterImpact = applyClusterDailyPenalties();
   showNotification("Ночные потери: все параметры снижены");
+  if (clusterImpact?.summary){
+    showNotification(`⚠️ Истощённые кластеры: ${clusterImpact.summary}`);
+  }
 }
 function checkCrises(){
   if (gameState.stats.health < 40 && !gameState.crisisFlags.epidemic){ gameState.crisisFlags.epidemic = true; showNotification("⚠️ ЭПИДЕМИЯ началась в поселении!"); }
@@ -829,6 +1070,7 @@ function giveWord(){
 
   gameState.selectedWord = null; gameState.currentVisitor = null;
   document.getElementById('give-word-btn').disabled = true;
+  checkClusterDepletion();
   renderCategories(); renderWords(); updateWordCount();
 
   setTimeout(()=>showNextVisitor(), 2000);
@@ -844,12 +1086,12 @@ function applyEffects(result){
 }
 function showResult(word, message, effects){
   const div=document.createElement('div'); div.className='result-message';
-  const em = {health:'❤️', food:'🌾', safety:'🛡️', morale:'💚', trust:'🤝'};
   let statsHtml = '<div class="stat-changes">';
   Object.keys(effects).forEach(k=>{
     if (k==='message' || !effects[k]) return;
     const cls = effects[k]>0 ? 'positive' : 'negative';
-    statsHtml += `<span class="stat-change ${cls}">${em[k]||''} ${effects[k]>0?'+':''}${effects[k]}</span>`;
+    const icon = STAT_EMOJIS[k] || '';
+    statsHtml += `<span class="stat-change ${cls}">${icon} ${effects[k]>0?'+':''}${effects[k]}</span>`;
   });
   statsHtml += '</div>';
   div.innerHTML = `<h3>Использовано: "${word}"</h3><p>${message||''}</p>${statsHtml}`;
@@ -948,6 +1190,7 @@ function createNeologism(){
 
   closeModal();
   addToJournal(`Создан неологизм: "${name}" (${tooltip})`);
+  checkClusterDepletion();
   renderCategories(); renderWords(); updateWordCount();
   showResult(name, `Новое слово «${name}» добавлено в книгу!`, { trust:5 });
 }
@@ -957,8 +1200,7 @@ function endDay(){
   // сводка
   const delta = {};
   Object.keys(gameState.stats).forEach(k=> delta[k] = (gameState.stats[k]||0) - (gameState.snapshot[k]||0));
-  const em = {health:'❤️', food:'🌾', safety:'🛡️', morale:'💚', trust:'🤝'};
-  const parts = Object.keys(delta).map(k=> delta[k] ? `${em[k]} ${delta[k]>0?'+':''}${delta[k]}` : '').filter(Boolean);
+  const parts = Object.keys(delta).map(k=> delta[k] ? `${STAT_EMOJIS[k]||''} ${delta[k]>0?'+':''}${delta[k]}` : '').filter(Boolean);
   const vc = document.getElementById('visitor-content');
   vc.innerHTML = `
     <div style="text-align:center; padding:18px;">
