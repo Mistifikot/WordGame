@@ -150,7 +150,16 @@
     margin-bottom:20px; padding:12px 16px; background: rgba(0,0,0,0.5); border:1px solid var(--border); border-radius:8px; color:var(--paper); font-family:'BookText', Georgia, serif; font-size:1em; transition:all .3s ease; position:relative;
   }
   .word-search:focus{ outline:none; border-color:var(--gold-dim); box-shadow:0 0 10px rgba(255,215,0,0.2); }
-  .word-categories{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; position:relative; }
+  .word-filter-row{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:20px; position:relative; }
+  .word-categories{ display:flex; gap:8px; flex-wrap:wrap; position:relative; flex:1; }
+  .word-domain-filter{
+    padding:10px 16px; background:linear-gradient(135deg, rgba(139,115,85,0.25), rgba(100,80,60,0.2));
+    border:1px solid var(--border); border-radius:8px; color:var(--paper); font-family:'BookText', Georgia, serif;
+    font-size:.85em; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; transition:all .3s ease;
+    min-width:160px; appearance:none; background-image:linear-gradient(135deg, rgba(139,115,85,0.25), rgba(100,80,60,0.2));
+  }
+  .word-domain-filter:hover{ border-color:var(--gold-dim); box-shadow:0 0 10px rgba(255,215,0,0.2); }
+  .word-domain-filter:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 12px rgba(255,215,0,0.25); }
   .category-tab{
     padding:8px 14px; background:linear-gradient(135deg, rgba(139,115,85,0.2), rgba(100,80,60,0.15)); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:.9em; font-weight:600; transition:all .3s ease; position:relative; letter-spacing:.5px;
   }
@@ -163,16 +172,27 @@
   .words-container::-webkit-scrollbar-thumb{ background:var(--border); border-radius:5px; } .words-container::-webkit-scrollbar-thumb:hover{ background:var(--border-light); }
 
   .word{
-    display:inline-block; padding:12px 18px; margin:8px; background:linear-gradient(135deg, rgba(139,115,85,0.35), rgba(100,80,60,0.3));
-    border:1px solid var(--border); border-radius:8px; cursor:grab; transition:all .25s ease; position:relative; font-size:1.05em; font-weight:600; letter-spacing:.5px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,215,0,0.05);
+    display:inline-flex; flex-direction:column; align-items:flex-start; gap:6px;
+    padding:12px 18px; margin:8px; min-width:160px;
+    background:linear-gradient(135deg, rgba(139,115,85,0.35), rgba(100,80,60,0.3));
+    border:1px solid var(--border); border-radius:8px; cursor:grab; transition:all .25s ease;
+    position:relative; box-shadow:0 2px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,215,0,0.05);
   }
   .word:active{ cursor:grabbing; }
   .word:hover:not(.used){ background:linear-gradient(135deg, rgba(139,115,85,0.5), rgba(100,80,60,0.45)); transform:translateY(-4px) scale(1.05); box-shadow:0 6px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,215,0,0.2), inset 0 1px 3px rgba(255,215,0,0.1); }
-  .word.used{ opacity:.3; text-decoration:line-through; cursor:not-allowed; background:rgba(50,50,50,0.3); box-shadow:none; }
+  .word.used{ opacity:.3; cursor:not-allowed; background:rgba(50,50,50,0.3); box-shadow:none; }
+  .word.used .word-title{ text-decoration:line-through; }
   .word.selected{ background:linear-gradient(135deg, rgba(255,215,0,0.35), rgba(255,200,0,0.25)); border-color:var(--gold); box-shadow:0 0 20px var(--glow-gold), inset 0 0 10px rgba(255,215,0,0.2); transform:translateY(-4px) scale(1.08); animation:selectedWordPulse 1s ease-in-out infinite; }
   @keyframes selectedWordPulse{ 0%,100%{ filter:brightness(1)} 50%{ filter:brightness(1.2)} }
   .word.neologism{ background:linear-gradient(135deg, rgba(150,100,200,0.35), rgba(100,50,150,0.3)); border-color:#9966ff; }
+  .word-title{ font-size:1.05em; font-weight:600; letter-spacing:.5px; color:var(--paper); }
+  .word-meta{ display:flex; align-items:center; gap:10px; font-size:.8em; color:var(--paper-dark); text-transform:uppercase; letter-spacing:.4px; }
+  .word-rank{ color:var(--gold); letter-spacing:2px; text-shadow:0 0 6px rgba(255,215,0,0.25); font-size:1em; }
+  .word-domain{
+    display:inline-flex; align-items:center;
+    padding:2px 8px; border:1px solid rgba(255,215,0,0.25); border-radius:999px; background:rgba(139,115,85,0.25);
+    color:var(--paper); font-weight:600; font-size:.75em; letter-spacing:.6px;
+  }
   .word-tooltip{
     position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,0.95); border:1px solid var(--border); padding:10px 14px; border-radius:8px; font-size:.9em; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .3s ease; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.5);
@@ -324,7 +344,10 @@
     <h2>📖 КНИГА СЛОВ</h2>
     <div class="word-count" id="word-count">Доступно: 0</div>
     <input type="text" class="word-search" placeholder="Поиск слова..." id="word-search">
-    <div class="word-categories" id="word-categories"></div>
+    <div class="word-filter-row">
+      <div class="word-categories" id="word-categories"></div>
+      <select class="word-domain-filter" id="domain-filter" aria-label="Фильтр по домену"></select>
+    </div>
     <div class="words-container" id="words-container"></div>
     <div class="action-buttons">
       <button class="action-button" id="give-word-btn" onclick="giveWord()" disabled>ОТДАТЬ СЛОВО</button>
@@ -337,6 +360,56 @@
 /* ===================== КОНФИГ / СОСТОЯНИЕ ===================== */
 const CATEGORIES = ['all','medicine','emotion','nature','resource','social','abstract'];
 const CATEGORY_NAMES = { all:'ВСЕ', medicine:'МЕДИЦИНА', emotion:'ЭМОЦИИ', nature:'ПРИРОДА', resource:'РЕСУРСЫ', social:'ОБЩЕСТВО', abstract:'АБСТРАКТ' };
+const DOMAINS = ['all','aid','spirit','elements','provision','society','mystic'];
+const DOMAIN_NAMES = {
+  all:'ВСЕ ДОМЕНЫ',
+  aid:'ЗАБОТА',
+  spirit:'ДУХ',
+  elements:'СТИХИИ',
+  provision:'ПРОПИТАНИЕ',
+  society:'СОЦИУМ',
+  mystic:'МЕТАФИЗИКА'
+};
+const MAX_WORD_RANK = 3;
+const DEFAULT_WORD_PROPS = { domain:'mystic', rank:1, cluster:'misc' };
+
+let wordFilters = { category:'all', domain:'all' };
+
+function normalizeWord(word){
+  const normalizedRank = typeof word?.rank === 'number'
+    ? Math.min(MAX_WORD_RANK, Math.max(1, word.rank))
+    : DEFAULT_WORD_PROPS.rank;
+  return {
+    ...DEFAULT_WORD_PROPS,
+    ...word,
+    rank: normalizedRank,
+    domain: word?.domain || DEFAULT_WORD_PROPS.domain,
+    cluster: word?.cluster || DEFAULT_WORD_PROPS.cluster
+  };
+}
+
+function groupWordsByCluster(words = []){
+  return words.reduce((acc, word)=>{
+    const normalized = normalizeWord(word);
+    const key = normalized.cluster || DEFAULT_WORD_PROPS.cluster;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(normalized);
+    return acc;
+  }, {});
+}
+
+function updateWordClusters(){
+  if (typeof gameState === 'undefined' || typeof wordsDatabase === 'undefined') return;
+  gameState.wordClusters = groupWordsByCluster([...wordsDatabase, ...gameState.discoveredWords]);
+}
+
+function resetWordFilters(){
+  wordFilters = { category:'all', domain:'all' };
+  const searchInput = document.getElementById('word-search');
+  if (searchInput) searchInput.value = '';
+  const domainSelect = document.getElementById('domain-filter');
+  if (domainSelect) domainSelect.value = 'all';
+}
 
 const DEFAULT_STATS = { health:65, food:55, safety:45, morale:50, trust:45 };
 
@@ -356,56 +429,59 @@ let gameState = {
   nightDecay:3,
   crisisFlags:{ epidemic:false, famine:false, unrest:false },
   wordsUsedToday:[],
-  snapshot:{}
+  snapshot:{},
+  wordClusters:{}
 };
 
 /* ===================== БАЗА СЛОВ ===================== */
 const wordsDatabase = [
-  { text:"Лекарство", category:"medicine", id:"med1", tooltip:"Универсальное средство" },
-  { text:"Исцеление", category:"medicine", id:"med2", tooltip:"Магическое восстановление" },
-  { text:"Травы", category:"medicine", id:"med3", tooltip:"Природные средства" },
-  { text:"Перевязка", category:"medicine", id:"med4", tooltip:"Остановка крови" },
-  { text:"Антидот", category:"medicine", id:"med5", tooltip:"Противоядие" },
-  { text:"Карантин", category:"medicine", id:"med6", tooltip:"Изоляция больных" },
+  { text:"Лекарство", category:"medicine", id:"med1", tooltip:"Универсальное средство", domain:"aid", rank:2, cluster:"healing" },
+  { text:"Исцеление", category:"medicine", id:"med2", tooltip:"Магическое восстановление", domain:"aid", rank:3, cluster:"healing" },
+  { text:"Травы", category:"medicine", id:"med3", tooltip:"Природные средства", domain:"aid", rank:1, cluster:"healing" },
+  { text:"Перевязка", category:"medicine", id:"med4", tooltip:"Остановка крови", domain:"aid", rank:1, cluster:"healing" },
+  { text:"Антидот", category:"medicine", id:"med5", tooltip:"Противоядие", domain:"aid", rank:2, cluster:"antitoxin" },
+  { text:"Карантин", category:"medicine", id:"med6", tooltip:"Изоляция больных", domain:"aid", rank:2, cluster:"containment" },
 
-  { text:"Мужество", category:"emotion", id:"emo1", tooltip:"Храбрость" },
-  { text:"Надежда", category:"emotion", id:"emo2", tooltip:"Вера в лучшее" },
-  { text:"Покой", category:"emotion", id:"emo3", tooltip:"Умиротворение" },
-  { text:"Гнев", category:"emotion", id:"emo4", tooltip:"Ярость" },
-  { text:"Радость", category:"emotion", id:"emo5", tooltip:"Счастье" },
-  { text:"Любовь", category:"emotion", id:"emo6", tooltip:"Привязанность" },
-  { text:"Страх", category:"emotion", id:"emo7", tooltip:"Ужас" },
-  { text:"Отчаяние", category:"emotion", id:"emo8", tooltip:"Безнадежность" },
+  { text:"Мужество", category:"emotion", id:"emo1", tooltip:"Храбрость", domain:"spirit", rank:2, cluster:"uplift" },
+  { text:"Надежда", category:"emotion", id:"emo2", tooltip:"Вера в лучшее", domain:"spirit", rank:3, cluster:"uplift" },
+  { text:"Покой", category:"emotion", id:"emo3", tooltip:"Умиротворение", domain:"spirit", rank:1, cluster:"calm" },
+  { text:"Гнев", category:"emotion", id:"emo4", tooltip:"Ярость", domain:"spirit", rank:1, cluster:"fury" },
+  { text:"Радость", category:"emotion", id:"emo5", tooltip:"Счастье", domain:"spirit", rank:2, cluster:"uplift" },
+  { text:"Любовь", category:"emotion", id:"emo6", tooltip:"Привязанность", domain:"spirit", rank:3, cluster:"uplift" },
+  { text:"Страх", category:"emotion", id:"emo7", tooltip:"Ужас", domain:"spirit", rank:1, cluster:"dread" },
+  { text:"Отчаяние", category:"emotion", id:"emo8", tooltip:"Безнадежность", domain:"spirit", rank:1, cluster:"dread" },
 
-  { text:"Дождь", category:"nature", id:"nat1", tooltip:"Вода с небес" },
-  { text:"Огонь", category:"nature", id:"nat2", tooltip:"Пламя" },
-  { text:"Вода", category:"nature", id:"nat3", tooltip:"Источник жизни" },
-  { text:"Ветер", category:"nature", id:"nat4", tooltip:"Движение воздуха" },
-  { text:"Солнце", category:"nature", id:"nat5", tooltip:"Свет и тепло" },
-  { text:"Земля", category:"nature", id:"nat6", tooltip:"Почва" },
-  { text:"Лёд", category:"nature", id:"nat7", tooltip:"Холод" },
-  { text:"Туман", category:"nature", id:"nat8", tooltip:"Сокрытие" },
+  { text:"Дождь", category:"nature", id:"nat1", tooltip:"Вода с небес", domain:"elements", rank:1, cluster:"storm" },
+  { text:"Огонь", category:"nature", id:"nat2", tooltip:"Пламя", domain:"elements", rank:2, cluster:"flame" },
+  { text:"Вода", category:"nature", id:"nat3", tooltip:"Источник жизни", domain:"elements", rank:2, cluster:"waters" },
+  { text:"Ветер", category:"nature", id:"nat4", tooltip:"Движение воздуха", domain:"elements", rank:1, cluster:"storm" },
+  { text:"Солнце", category:"nature", id:"nat5", tooltip:"Свет и тепло", domain:"elements", rank:3, cluster:"flame" },
+  { text:"Земля", category:"nature", id:"nat6", tooltip:"Почва", domain:"elements", rank:2, cluster:"earth" },
+  { text:"Лёд", category:"nature", id:"nat7", tooltip:"Холод", domain:"elements", rank:1, cluster:"waters" },
+  { text:"Туман", category:"nature", id:"nat8", tooltip:"Сокрытие", domain:"elements", rank:1, cluster:"veil" },
 
-  { text:"Хлеб", category:"resource", id:"res1", tooltip:"Основная пища" },
-  { text:"Зерно", category:"resource", id:"res2", tooltip:"Семена" },
-  { text:"Урожай", category:"resource", id:"res3", tooltip:"Плоды труда" },
-  { text:"Инструмент", category:"resource", id:"res4", tooltip:"Орудия" },
-  { text:"Убежище", category:"resource", id:"res5", tooltip:"Защита" },
-  { text:"Оружие", category:"resource", id:"res6", tooltip:"Средство обороны" },
+  { text:"Хлеб", category:"resource", id:"res1", tooltip:"Основная пища", domain:"provision", rank:2, cluster:"sustenance" },
+  { text:"Зерно", category:"resource", id:"res2", tooltip:"Семена", domain:"provision", rank:1, cluster:"sustenance" },
+  { text:"Урожай", category:"resource", id:"res3", tooltip:"Плоды труда", domain:"provision", rank:3, cluster:"sustenance" },
+  { text:"Инструмент", category:"resource", id:"res4", tooltip:"Орудия", domain:"provision", rank:2, cluster:"craft" },
+  { text:"Убежище", category:"resource", id:"res5", tooltip:"Защита", domain:"provision", rank:3, cluster:"shelter" },
+  { text:"Оружие", category:"resource", id:"res6", tooltip:"Средство обороны", domain:"provision", rank:2, cluster:"defense" },
 
-  { text:"Мир", category:"social", id:"soc1", tooltip:"Согласие" },
-  { text:"Справедливость", category:"social", id:"soc2", tooltip:"Честность" },
-  { text:"Закон", category:"social", id:"soc3", tooltip:"Порядок" },
-  { text:"Единство", category:"social", id:"soc4", tooltip:"Сплоченность" },
-  { text:"Знание", category:"social", id:"soc5", tooltip:"Мудрость" },
-  { text:"Правда", category:"social", id:"soc6", tooltip:"Истина" },
+  { text:"Мир", category:"social", id:"soc1", tooltip:"Согласие", domain:"society", rank:2, cluster:"harmony" },
+  { text:"Справедливость", category:"social", id:"soc2", tooltip:"Честность", domain:"society", rank:3, cluster:"principles" },
+  { text:"Закон", category:"social", id:"soc3", tooltip:"Порядок", domain:"society", rank:2, cluster:"principles" },
+  { text:"Единство", category:"social", id:"soc4", tooltip:"Сплоченность", domain:"society", rank:2, cluster:"harmony" },
+  { text:"Знание", category:"social", id:"soc5", tooltip:"Мудрость", domain:"society", rank:3, cluster:"wisdom" },
+  { text:"Правда", category:"social", id:"soc6", tooltip:"Истина", domain:"society", rank:2, cluster:"principles" },
 
-  { text:"Время", category:"abstract", id:"abs1", tooltip:"Течение событий" },
-  { text:"Тишина", category:"abstract", id:"abs2", tooltip:"Отсутствие звука" },
-  { text:"Свет", category:"abstract", id:"abs3", tooltip:"Сияние" },
-  { text:"Судьба", category:"abstract", id:"abs4", tooltip:"Предначертание" },
-  { text:"Память", category:"abstract", id:"abs5", tooltip:"Воспоминания" }
-];
+  { text:"Время", category:"abstract", id:"abs1", tooltip:"Течение событий", domain:"mystic", rank:2, cluster:"time" },
+  { text:"Тишина", category:"abstract", id:"abs2", tooltip:"Отсутствие звука", domain:"mystic", rank:1, cluster:"silence" },
+  { text:"Свет", category:"abstract", id:"abs3", tooltip:"Сияние", domain:"mystic", rank:2, cluster:"light" },
+  { text:"Судьба", category:"abstract", id:"abs4", tooltip:"Предначертание", domain:"mystic", rank:3, cluster:"destiny" },
+  { text:"Память", category:"abstract", id:"abs5", tooltip:"Воспоминания", domain:"mystic", rank:2, cluster:"memory" }
+].map(normalizeWord);
+
+updateWordClusters();
 
 /* ===================== КАМПАНИЯ / СОБЫТИЯ ===================== */
 const campaignEvents = {
@@ -546,9 +622,10 @@ function continueGame(){
   resetGame();
   Object.assign(gameState, {
     mode:data.mode||'campaign', day:data.day||1, stats:data.stats||{...DEFAULT_STATS},
-    usedWords:new Set(data.usedWords||[]), discoveredWords:data.discoveredWords||[],
+    usedWords:new Set(data.usedWords||[]), discoveredWords:(data.discoveredWords||[]).map(normalizeWord),
     canCreateNeologism: data.canCreateNeologism ?? 2, roguelikeScore:data.roguelikeScore||0
   });
+  updateWordClusters();
   enterGame(); startDay();
 }
 
@@ -556,10 +633,14 @@ function continueGame(){
 function init(){
   createParticles();
   if (hasSave()) document.getElementById('continue-btn').style.display='block';
-  document.getElementById('word-search').addEventListener('input', e=>{
-    const active = document.querySelector('.category-tab.active')?.dataset.category || 'all';
-    renderWords(active, e.target.value);
+  document.getElementById('word-search').addEventListener('input', ()=>{
+    renderWords();
   });
+  const domainFilter = document.getElementById('domain-filter');
+  if (domainFilter){
+    renderDomainFilter();
+    domainFilter.addEventListener('change', e=>filterByDomain(e.target.value));
+  }
   document.addEventListener('keydown', e=>{
     if (e.key==='Escape') closeModal();
     if (e.key>='1' && e.key<='7'){ const idx=parseInt(e.key)-1; if (CATEGORIES[idx]) filterByCategory(CATEGORIES[idx]); }
@@ -589,15 +670,22 @@ function resetGame(){
     mode:'campaign', day:1, stats:{...DEFAULT_STATS}, currentVisitor:null, selectedWord:null,
     visitorsQueue:[], usedWords:new Set(), journal:[], canCreateNeologism:2, discoveredWords:[],
     roguelikeScore:0, ended:false, nightDecay:3, crisisFlags:{epidemic:false,famine:false,unrest:false},
-    wordsUsedToday:[], snapshot:{}
+    wordsUsedToday:[], snapshot:{}, wordClusters:{}
   };
+  wordFilters = { category:'all', domain:'all' };
+  updateWordClusters();
 }
 function enterGame(){
   document.getElementById('main-menu').style.opacity='0';
+  resetWordFilters();
   setTimeout(()=>{
     document.getElementById('main-menu').style.display='none';
     document.getElementById('game-container').classList.add('visible');
-    renderCategories(); renderWords(); updateStats(); updateWordCount();
+    renderDomainFilter();
+    renderCategories();
+    renderWords();
+    updateStats();
+    updateWordCount();
   }, 1000);
 }
 
@@ -758,40 +846,120 @@ function updateQueueIndicator(){
 
 /* ===================== UI: СЛОВА ===================== */
 function renderCategories(){
-  const c=document.getElementById('word-categories'); c.innerHTML='';
+  const container = document.getElementById('word-categories');
+  if (!container) return;
+  container.innerHTML = '';
   CATEGORIES.forEach(cat=>{
-    const tab=document.createElement('div'); tab.className='category-tab'; if (cat==='all') tab.classList.add('active');
-    tab.dataset.category = cat; tab.textContent = CATEGORY_NAMES[cat]; tab.onclick = ()=>filterByCategory(cat);
-    if (cat!=='all'){ const count=getAvailableWordsInCategory(cat); if (count>0){ const b=document.createElement('span'); b.className='category-count'; b.textContent=count; tab.appendChild(b);} }
-    c.appendChild(tab);
+    const tab = document.createElement('div');
+    tab.className = 'category-tab';
+    if (cat === wordFilters.category) tab.classList.add('active');
+    tab.dataset.category = cat;
+    tab.textContent = CATEGORY_NAMES[cat];
+    tab.onclick = ()=>filterByCategory(cat);
+    if (cat !== 'all'){
+      const count = getAvailableWordsInCategory(cat);
+      if (count > 0){
+        const badge = document.createElement('span');
+        badge.className = 'category-count';
+        badge.textContent = count;
+        tab.appendChild(badge);
+      }
+    }
+    container.appendChild(tab);
   });
 }
+function renderDomainFilter(){
+  const select = document.getElementById('domain-filter');
+  if (!select) return;
+  select.innerHTML = '';
+  DOMAINS.forEach(domain=>{
+    const option = document.createElement('option');
+    option.value = domain;
+    option.textContent = DOMAIN_NAMES[domain] || domain;
+    select.appendChild(option);
+  });
+  select.value = wordFilters.domain;
+}
 function getAvailableWordsInCategory(category){
-  const all=[...wordsDatabase, ...gameState.discoveredWords];
-  return all.filter(w=>w.category===category && !gameState.usedWords.has(w.id)).length;
+  const all = [...wordsDatabase, ...gameState.discoveredWords];
+  return all.filter(word=>{
+    if (gameState.usedWords.has(word.id)) return false;
+    if (wordFilters.domain !== 'all' && word.domain !== wordFilters.domain) return false;
+    return category === 'all' ? true : word.category === category;
+  }).length;
 }
 function filterByCategory(category){
-  document.querySelectorAll('.category-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelector(`[data-category="${category}"]`).classList.add('active');
-  renderWords(category);
+  if (!CATEGORIES.includes(category)) category = 'all';
+  wordFilters.category = category;
+  renderCategories();
+  renderWords();
 }
-function renderWords(category='all', search=''){
+function filterByDomain(domain){
+  if (!DOMAINS.includes(domain)) domain = 'all';
+  wordFilters.domain = domain;
+  renderDomainFilter();
+  renderCategories();
+  renderWords();
+}
+function renderRankStars(rank = DEFAULT_WORD_PROPS.rank){
+  const safeRank = Math.min(MAX_WORD_RANK, Math.max(1, rank || DEFAULT_WORD_PROPS.rank));
+  return '★'.repeat(safeRank) + '☆'.repeat(MAX_WORD_RANK - safeRank);
+}
+function renderWords(){
   const container = document.getElementById('words-container');
-  const s = (search || document.getElementById('word-search').value || '').toLowerCase();
+  if (!container) return;
+  const searchValue = (document.getElementById('word-search')?.value || '').toLowerCase();
   let words = [...wordsDatabase, ...gameState.discoveredWords];
-  if (category!=='all') words = words.filter(w=>w.category===category);
-  if (s) words = words.filter(w=>w.text.toLowerCase().includes(s));
+  if (wordFilters.category !== 'all') words = words.filter(w=>w.category === wordFilters.category);
+  if (wordFilters.domain !== 'all') words = words.filter(w=>w.domain === wordFilters.domain);
+  if (searchValue) words = words.filter(w=>w.text.toLowerCase().includes(searchValue));
+  words.sort((a,b)=>{
+    const rankDiff = (b.rank || 0) - (a.rank || 0);
+    if (rankDiff !== 0) return rankDiff;
+    return a.text.localeCompare(b.text, 'ru');
+  });
   container.innerHTML = '';
   words.forEach(word=>{
-    const el=document.createElement('div'); el.className='word'; el.textContent=word.text; el.dataset.id=word.id;
+    const el = document.createElement('div');
+    el.className = 'word';
+    el.dataset.id = word.id;
+
+    const title = document.createElement('div');
+    title.className = 'word-title';
+    title.textContent = word.text;
+    el.appendChild(title);
+
+    const meta = document.createElement('div');
+    meta.className = 'word-meta';
+    const rankSpan = document.createElement('span');
+    rankSpan.className = 'word-rank';
+    rankSpan.setAttribute('aria-label', `Ранг ${word.rank}`);
+    rankSpan.textContent = renderRankStars(word.rank);
+    meta.appendChild(rankSpan);
+    if (word.domain){
+      const domainSpan = document.createElement('span');
+      domainSpan.className = 'word-domain';
+      domainSpan.textContent = DOMAIN_NAMES[word.domain] || word.domain;
+      meta.appendChild(domainSpan);
+    }
+    el.appendChild(meta);
+
     if (gameState.discoveredWords.includes(word)) el.classList.add('neologism');
-    if (word.tooltip){ const tip=document.createElement('div'); tip.className='word-tooltip'; tip.textContent=word.tooltip; el.appendChild(tip); }
-    if (gameState.usedWords.has(word.id)) el.classList.add('used');
-    else {
+    if (word.tooltip){
+      const tip = document.createElement('div');
+      tip.className = 'word-tooltip';
+      tip.textContent = word.tooltip;
+      el.appendChild(tip);
+    }
+
+    if (gameState.usedWords.has(word.id)){
+      el.classList.add('used');
+    } else {
       el.onclick = ()=>selectWord(word);
       el.draggable = true;
       el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', word.id); });
     }
+
     container.appendChild(el);
   });
 }
@@ -896,10 +1064,19 @@ function selectDiscoveredWord(el, word){
 function confirmDiscovery(maxCount){
   if (selectedDiscoveries.length !== maxCount){ alert(`Нужно выбрать ровно ${maxCount} слов(а)`); return; }
   selectedDiscoveries.forEach(word=>{
-    const newWord = { text:word, category:'abstract', id:'disc_'+Date.now()+'_'+word, tooltip:'Найденное слово' };
+    const newWord = normalizeWord({
+      text:word,
+      category:'abstract',
+      id:'disc_'+Date.now()+'_'+word,
+      tooltip:'Найденное слово',
+      domain:'mystic',
+      rank:2,
+      cluster:'discovery'
+    });
     gameState.discoveredWords.push(newWord);
     addToJournal(`Найдено слово: "${word}"`);
   });
+  updateWordClusters();
   closeModal();
   renderWords(); updateWordCount(); showNextVisitor();
 }
@@ -942,12 +1119,21 @@ function createNeologism(){
   neoSelected.forEach(w=> gameState.usedWords.add(w.id));
   // составить подсказку
   const tooltip = `Создано из: ${neoSelected.map(w=>w.text).join(' + ')}`;
-  const newWord = { text:name, category:'abstract', id:'neo_'+Date.now(), tooltip };
+  const newWord = normalizeWord({
+    text:name,
+    category:'abstract',
+    id:'neo_'+Date.now(),
+    tooltip,
+    domain:'mystic',
+    rank:3,
+    cluster:'neologism'
+  });
   gameState.discoveredWords.push(newWord);
   gameState.canCreateNeologism--;
 
   closeModal();
   addToJournal(`Создан неологизм: "${name}" (${tooltip})`);
+  updateWordClusters();
   renderCategories(); renderWords(); updateWordCount();
   showResult(name, `Новое слово «${name}» добавлено в книгу!`, { trust:5 });
 }
